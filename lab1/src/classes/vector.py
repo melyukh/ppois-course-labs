@@ -1,13 +1,9 @@
 import math
 from functools import total_ordering
+from typing import Iterable
 
 @total_ordering
 class Vector:
-    @classmethod
-    def generate_from_string(cls, text: str) -> "Vector":
-        x, y, z = map(float, text.split())
-        return cls(x, y, z)
-    
     @staticmethod
     def cos_between_the_vectors(vec1: "Vector", vec2: "Vector"):
         Vector._check_vector(vec1)
@@ -20,23 +16,51 @@ class Vector:
             raise TypeError("Неправильный тип данных: переданный аргумент не типа Vector")
     
     def __init__(self, 
-                 x: float, 
-                 y: float,
-                 z: float,
+                 x: float | int = 0.0, 
+                 y: float | int = 0.0,
+                 z: float | int = 0.0,
                 ) -> None:
         """
             Cущность вектора
         Args:
-            x (float): абсцисса конца вектора
-            y (float): ордината конца вектора
-            z (float): апликата конца вектора
+            x (float | int): абсцисса конца вектора
+            y (float | int): ордината конца вектора
+            z (float | int): апликата конца вектора
 
             Условимся, что начало вектора: (0, 0 ,0)
         """
-        self._x: float = x
-        self._y: float = y
-        self._z: float = z
+        self.x: float | int = x
+        self.y: float | int = y
+        self.z: float | int = z
 
+    @classmethod
+    def generate_from_string(cls, text: str) -> "Vector":
+        try:
+            x, y, z, *rest = map(float, text.split())
+        except ValueError:
+            raise ValueError("Некорректный тип данных")
+        if len(rest) != 0:
+            raise ValueError("Некорректный формат строки: ожидались 3 числа")
+        return cls(x, y, z)
+
+    @classmethod
+    def generate_from_iterable(cls, data: Iterable[float]) -> "Vector":
+        if isinstance(data, str):
+            raise TypeError("Ожидается список/кортеж чисел, а не строка")
+        if not isinstance(data, Iterable):
+            raise TypeError("Неправильный тип данных: передан не Iterable-тип")
+
+        data = list(data)
+
+        if len(data) != 3:
+            raise ValueError("Неверное количество аргументов")
+
+        if not all(isinstance(value, (int, float)) for value in data):
+            raise TypeError("Неправильный тип данных")
+
+        x, y, z = data
+        return cls(x, y, z)
+    
     def __copy__(self) -> "Vector":
         return Vector(self.x, self.y, self.z)
     
@@ -90,13 +114,13 @@ class Vector:
         self._check_vector(other)
         return Vector(self._x - other._x, self._y - other._y, self._z - other._z)
 
-    def __mul__(self, other) -> float | "Vector":
+    def __mul__(self, other) -> "float | Vector":
         if isinstance(other, (float, int)):
             return Vector(self._x * other, self._y * other, self._z * other)
         self._check_vector(other)
         return self._x * other._x + self._y * other._y + self._z * other._z
 
-    def __rmul__(self, other) -> float | "Vector":
+    def __rmul__(self, other) -> "float | Vector":
         return self.__mul__(other)
 
     def __matmul__(self, other) -> "Vector":
@@ -120,17 +144,18 @@ class Vector:
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, Vector):
-            return NotImplemented
+            raise TypeError("Неправильный тип данных: переданный аргумент не типа Vector")
         return math.isclose(self.length, other.length)
 
     def __lt__(self, other) -> bool:
         if not isinstance(other, Vector):
-            return NotImplemented
+            raise TypeError("Неправильный тип данных: переданный аргумент не типа Vector")
         return self.length < other.length
 
     __hash__ = None #т.к. объект не иммутабельный запрещаем хэширование нахуй
 
     
-
+    def __str__(self):
+        return f"{self.x} {self.y} {self.z}"    
     
     
