@@ -1,6 +1,6 @@
 import math
 from functools import total_ordering
-from typing import Iterable
+from typing import Iterable, Any
 
 @total_ordering
 class Vector:

@@ -1,5 +1,5 @@
 import pytest
-from src.classes.vector import Vector
+from src.vector.classes.vector import Vector
 
 
 @pytest.mark.parametrize(

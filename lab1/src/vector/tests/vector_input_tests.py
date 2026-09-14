@@ -1,6 +1,6 @@
 import pytest
-from src.classes.vector import Vector
-from typing import Iterable, Optional
+from src.vector.classes.vector import Vector
+from typing import Iterable, Optional, Any
 from contextlib import nullcontext as does_not_raise
 import copy
 

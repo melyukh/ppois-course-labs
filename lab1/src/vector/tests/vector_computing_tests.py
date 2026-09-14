@@ -1,6 +1,6 @@
 import pytest
-from src.classes.vector import Vector
-from typing import Optional, Iterable, Union
+from src.vector.classes.vector import Vector
+from typing import Optional, Iterable, Union, Any
 from contextlib import nullcontext as does_not_raise
 
 
@@ -18,8 +18,8 @@ from contextlib import nullcontext as does_not_raise
     ]
 )
 def test_adding_and_errors_raising(
-    vector1: any,
-    vector2: any, 
+    vector1: Any,
+    vector2: Any, 
     expected_result: Optional[tuple[float | int, float | int, float | int]],
     expected_error
 ) -> None:
@@ -40,8 +40,8 @@ def test_adding_and_errors_raising(
     ]
 )
 def test_substracting_and_errors_raising(
-    vector1: any, 
-    vector2: any,
+    vector1: Any, 
+    vector2: Any,
     expected_result: Optional[tuple[float | int, float | int, float | int]],
     expected_error
 ) -> None:
@@ -72,8 +72,8 @@ def test_substracting_and_errors_raising(
     ]
 )
 def test_multiplication_and_errors_raising(
-    vector1_or_num: any,
-    vector2_or_num: any,
+    vector1_or_num: Any,
+    vector2_or_num: Any,
     expected_result: Union[Optional[tuple[float | int, float | int, float | int]] | Optional[float]],
     expected_error
 ) -> None:
@@ -103,8 +103,8 @@ def test_multiplication_and_errors_raising(
     ]
 )
 def test_matmultiplication_and_errors_raising(
-    vector1: any,
-    vector2: any,
+    vector1: Any,
+    vector2: Any,
     expected_result: Optional[tuple[float | int, float | int, float | int]],
     expected_error
 ) -> None:
@@ -131,8 +131,8 @@ def test_matmultiplication_and_errors_raising(
     ]
 )
 def test_divising_and_errors_raising(
-    vector1: any,
-    value: any,
+    vector1: Any,
+    value: Any,
     expected_result: Optional[tuple[float | int, float | int, float | int]],
     expected_error
 ) -> None:
