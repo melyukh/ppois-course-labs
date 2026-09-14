@@ -105,15 +105,20 @@ class Matrix(BaseMatrix):
 
 
     def __pow__(self, number: int):
+        if not self.is_square():
+            raise ValueError("возведение в степень допустимо для квадратных матриц\n")
         if number < 0: 
-            raise ValueError("степень не можем быть ниже 0\n")
+            raise ValueError("степень не может быть ниже 0\n")
         if number == 0:
             data = [[1 if i == j else 0 for j in range(self.rows)] for i in range(self.rows)]
             return Matrix.create(data)
         if number == 1:
-            return Matrix.create(self.data)
+            return Matrix.create(self.matrix)
 
-        return self ** (number / 2) * self ** (number / 2) if number % 2 == 0 else self * self ** (number - 1)
+        if number % 2 == 0:
+            val = self ** (number // 2)
+            return val * val
+        return self * self ** (number - 1)
 
 
     def norm(self) -> float:
