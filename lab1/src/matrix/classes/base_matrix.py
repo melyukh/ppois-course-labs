@@ -20,6 +20,10 @@ class BaseMatrix(ABC):
     def _is_num(other_object: Any) -> bool:
         return isinstance(other_object, (float, int))
 
+    def __copy__(self) -> "BaseMatrix":
+        new_data = [row[:] for row in self.matrix]
+        return type(self)(new_data)
+
     def __eq__(self, other):
         if not BaseMatrix._is_matrix(other):
             raise TypeError("сравниваем не с матрицей\n")
@@ -74,8 +78,15 @@ class BaseMatrix(ABC):
     def is_diagonal(self) -> bool:
         return self.is_low_triangular() and self.is_high_triangular()
 
-    def is_symmetry(self) -> bool:
-        return self.is_square() and self == self.transpose()
+    def is_symmetric(self) -> bool:
+        new_data = []
+        for j in range(self.columns):
+            array = []
+            for i in range(self.rows):
+                array.append(self.matrix[i][j])
+            new_data.append(array)
+
+        return self.is_square() and self.matrix == new_data
 
     def is_low_triangular(self) -> bool:
         if not self.is_square():

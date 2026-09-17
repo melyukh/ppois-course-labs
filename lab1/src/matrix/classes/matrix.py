@@ -3,11 +3,35 @@ from math import sqrt
 from src.matrix.classes.base_matrix import BaseMatrix
 
 class Matrix(BaseMatrix):
-    def __init__(self, two_dim_array: List[List[int]]) -> None:
-        super().__init__(two_dim_array)
+    def __init__(self, data: List[List[int]]) -> None:
+        if not data or not data[0]:
+            raise ValueError("Матрица не может быть пустой")
+        for i in range(1, len(data)):
+            if len(data[i]) != len(data[0]):
+                raise ValueError("Неравная длина строк")
+        super().__init__(data)
 
     def _build(self, data: List[List[int]]) -> "BaseMatrix":
         return Matrix.create(data)
+
+    @classmethod
+    def generate_from_string(cls, line: str) -> "BaseMatrix":
+        result = []
+        data = [row for row in line.split('\n') if row]
+        if not data or not data[0]:
+            raise ValueError("Матрица не может быть пустой")
+        try:
+            row = list(map(float, data[0].split()))
+            result.append(row)
+            for i in range(1, len(data)):
+                next_row = list(map(float, data[i].split()))
+                if len(row) != len(next_row):
+                    raise ValueError("Неравная длина строк")
+                result.append(next_row)
+        except ValueError:
+            raise ValueError("Неверный тип данных")
+
+        return Matrix.create(result)
 
     @classmethod
     def generate_from_file(cls, path: str) -> "BaseMatrix":
@@ -22,7 +46,13 @@ class Matrix(BaseMatrix):
         return Matrix.create(data)
 
     @staticmethod
-    def create(cls, data: List[List[int]]) -> "BaseMatrix":
+    def create(data: List[List[int]]) -> "BaseMatrix":
+        from src.matrix.classes.identity_matrix import IdentityMatrix
+        from src.matrix.classes.diagonal_matrix import DiagonalMatrix
+        from src.matrix.classes.symmetric_matrix import SymmetricMatrix
+        from src.matrix.classes.square_matrix import SquareMatrix
+        from src.matrix.classes.zero_matrix import ZeroMatrix
+
         temp = Matrix(data)
 
         if temp.is_identity():
@@ -103,23 +133,8 @@ class Matrix(BaseMatrix):
     def __rtruediv__(self, other):
         return NotImplemented
 
-
-    def __pow__(self, number: int):
-        if not self.is_square():
-            raise ValueError("возведение в степень допустимо для квадратных матриц\n")
-        if number < 0: 
-            raise ValueError("степень не может быть ниже 0\n")
-        if number == 0:
-            data = [[1 if i == j else 0 for j in range(self.rows)] for i in range(self.rows)]
-            return Matrix.create(data)
-        if number == 1:
-            return Matrix.create(self.matrix)
-
-        if number % 2 == 0:
-            val = self ** (number // 2)
-            return val * val
-        return self * self ** (number - 1)
-
+    def __str__(self) -> str:
+        return '\n'.join([' '.join(map(str, self.matrix[i])) for i in range(self.rows)])
 
     def norm(self) -> float:
         sum = 0.0
