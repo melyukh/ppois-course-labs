@@ -1,9 +1,8 @@
 from src.matrix.classes.matrix import Matrix
 
+_session_matrices: dict[str, Matrix] = {}
 
-def read_matrix(prompt: str) -> Matrix:
-    """Считать матрицу с консоли построчно, до пустой строки."""
-    print(prompt)
+def _read_matrix_from_input() -> Matrix:
     print("(вводите строки чисел через пробел, пустая строка — конец ввода)")
     lines = []
     while True:
@@ -15,55 +14,104 @@ def read_matrix(prompt: str) -> Matrix:
     return Matrix.generate_from_string(text)
 
 
-def read_matrix_from_file() -> Matrix:
+def _read_matrix_from_file() -> Matrix:
     path = input("Введите путь к файлу: ")
     return Matrix.generate_from_file(path)
 
 
-def print_matrix(label: str, matrix: Matrix) -> None:
+def _obtain_matrix(prompt: str) -> Matrix:
+    """
+    Универсальный способ получить матрицу для операции:
+    - ввести с клавиатуры,
+    - загрузить из файла,
+    - взять уже сохранённую в этой сессии.
+    """
+    print(f"\n{prompt}")
+    print("1. Ввести вручную")
+    print("2. Загрузить из файла")
+    if _session_matrices:
+        print("3. Взять сохранённую матрицу")
+    choice = input("Выберите способ: ")
+
+    if choice == "1":
+        return _read_matrix_from_input()
+    elif choice == "2":
+        return _read_matrix_from_file()
+    elif choice == "3" and _session_matrices:
+        return _select_saved_matrix()
+    else:
+        raise ValueError("Неверный выбор способа ввода матрицы")
+
+
+def _select_saved_matrix() -> Matrix:
+    if not _session_matrices:
+        raise ValueError("Нет сохранённых матриц в этой сессии")
+    print("Сохранённые матрицы:")
+    keys = list(_session_matrices.keys())
+    for i, key in enumerate(keys, start=1):
+        print(f"{i}. {key}")
+    idx = int(input("Выберите номер: ")) - 1
+    if idx < 0 or idx >= len(keys):
+        raise ValueError("Неверный номер")
+    return _session_matrices[keys[idx]]
+
+
+def _save_matrix_to_session(matrix: Matrix) -> None:
+    save = input("Сохранить эту матрицу для дальнейшего использования? (y/n): ")
+    if save.strip().lower() == "y":
+        name = input("Введите имя для сохранённой матрицы: ").strip() or f"matrix_{len(_session_matrices) + 1}"
+        _session_matrices[name] = matrix
+        print(f"Матрица сохранена как '{name}'")
+
+
+def _print_matrix(label: str, matrix: Matrix) -> None:
     print(f"{label}:\n{matrix}")
 
 
-def read_number(prompt: str) -> float:
+def _read_number(prompt: str) -> float:
     return float(input(prompt))
 
 
-def read_int(prompt: str) -> int:
+def _read_int(prompt: str) -> int:
     return int(input(prompt))
 
 
-# --- Структурные операции ---
+def action_load_or_create() -> None:
+    """Явно создать/загрузить матрицу и предложить сохранить её на сессию."""
+    m = _obtain_matrix("Создание/загрузка матрицы:")
+    _print_matrix("Матрица", m)
+    _save_matrix_to_session(m)
+
 
 def action_resize() -> None:
-    m = read_matrix("Введите матрицу:")
-    rows = read_int("Новое число строк: ")
-    cols = read_int("Новое число столбцов: ")
+    m = _obtain_matrix("Матрица для изменения размера:")
+    rows = _read_int("Новое число строк: ")
+    cols = _read_int("Новое число столбцов: ")
     m.resize(rows, cols)
-    print_matrix("Результат", m)
-
-
-def action_load_from_file() -> None:
-    m = read_matrix_from_file()
-    print_matrix("Загруженная матрица", m)
+    _print_matrix("Результат", m)
+    _save_matrix_to_session(m)
 
 
 def action_submatrix() -> None:
-    m = read_matrix("Введите матрицу:")
-    rows = read_int("Число строк подматрицы: ")
-    cols = read_int("Число столбцов подматрицы: ")
-    row_start = read_int("Начальная строка (с 0): ")
-    col_start = read_int("Начальный столбец (с 0): ")
+    m = _obtain_matrix("Матрица для извлечения подматрицы:")
+    rows = _read_int("Число строк подматрицы: ")
+    cols = _read_int("Число столбцов подматрицы: ")
+    row_start = _read_int("Начальная строка (с 0): ")
+    col_start = _read_int("Начальный столбец (с 0): ")
     sub = m.submatrix(rows, cols, row_start, col_start)
-    print_matrix("Подматрица", sub)
+    _print_matrix("Подматрица", sub)
+    _save_matrix_to_session(sub)
 
 
 def action_transpose() -> None:
-    m = read_matrix("Введите матрицу:")
-    print_matrix("Транспонированная матрица", m.transpose())
+    m = _obtain_matrix("Матрица для транспонирования:")
+    result = m.transpose()
+    _print_matrix("Транспонированная матрица", result)
+    _save_matrix_to_session(result)
 
 
 def action_check_type() -> None:
-    m = read_matrix("Введите матрицу:")
+    m = _obtain_matrix("Матрица для проверки типа:")
     checks = {
         "Квадратная": m.is_square(),
         "Диагональная": m.is_diagonal(),
@@ -76,64 +124,84 @@ def action_check_type() -> None:
     for name, result in checks.items():
         print(f"{name}: {'да' if result else 'нет'}")
 
-
-# --- Арифметика ---
-
 def action_add() -> None:
-    m1 = read_matrix("Введите первую матрицу:")
-    m2 = read_matrix("Введите вторую матрицу:")
-    print_matrix("Результат сложения", m1 + m2)
+    m1 = _obtain_matrix("Первая матрица:")
+    m2 = _obtain_matrix("Вторая матрица:")
+    result = m1 + m2
+    _print_matrix("Результат сложения", result)
+    _save_matrix_to_session(result)
 
 
 def action_add_number() -> None:
-    m = read_matrix("Введите матрицу:")
-    number = read_number("Введите число: ")
-    print_matrix("Результат", m + number)
+    m = _obtain_matrix("Матрица:")
+    number = _read_number("Введите число: ")
+    result = m + number
+    _print_matrix("Результат", result)
+    _save_matrix_to_session(result)
 
 
 def action_sub() -> None:
-    m1 = read_matrix("Введите первую матрицу:")
-    m2 = read_matrix("Введите вторую матрицу:")
-    print_matrix("Результат вычитания", m1 - m2)
+    m1 = _obtain_matrix("Первая матрица (из которой вычитаем):")
+    m2 = _obtain_matrix("Вторая матрица (вычитаемая):")
+    result = m1 - m2
+    _print_matrix("Результат вычитания", result)
+    _save_matrix_to_session(result)
 
 
 def action_mul() -> None:
-    m1 = read_matrix("Введите первую матрицу:")
-    m2 = read_matrix("Введите вторую матрицу:")
-    print_matrix("Результат умножения", m1 * m2)
+    m1 = _obtain_matrix("Первая матрица:")
+    m2 = _obtain_matrix("Вторая матрица:")
+    result = m1 * m2
+    _print_matrix("Результат умножения", result)
+    _save_matrix_to_session(result)
 
 
 def action_mul_number() -> None:
-    m = read_matrix("Введите матрицу:")
-    number = read_number("Введите число: ")
-    print_matrix("Результат", m * number)
+    m = _obtain_matrix("Матрица:")
+    number = _read_number("Введите число: ")
+    result = m * number
+    _print_matrix("Результат", result)
+    _save_matrix_to_session(result)
 
 
 def action_div_number() -> None:
-    m = read_matrix("Введите матрицу:")
-    number = read_number("Введите число: ")
-    print_matrix("Результат", m / number)
+    m = _obtain_matrix("Матрица:")
+    number = _read_number("Введите число: ")
+    result = m / number
+    _print_matrix("Результат", result)
+    _save_matrix_to_session(result)
 
 
 def action_pow() -> None:
-    m = read_matrix("Введите квадратную матрицу:")
-    power = read_int("Введите степень (целое, >= 0): ")
-    print_matrix("Результат", m ** power)
+    m = _obtain_matrix("Квадратная матрица:")
+    power = _read_int("Введите степень (целое, >= 0): ")
+    result = m ** power
+    _print_matrix("Результат", result)
+    _save_matrix_to_session(result)
 
 
 def action_determinant() -> None:
-    m = read_matrix("Введите квадратную матрицу:")
+    m = _obtain_matrix("Квадратная матрица:")
     print(f"Определитель: {m.determinant()}")
 
 
 def action_norm() -> None:
-    m = read_matrix("Введите матрицу:")
+    m = _obtain_matrix("Матрица:")
     print(f"Норма Фробениуса: {m.norm()}")
 
 
+def action_list_saved() -> None:
+    if not _session_matrices:
+        print("Нет сохранённых матриц в этой сессии")
+        return
+    for name, m in _session_matrices.items():
+        print(f"\n--- {name} ---")
+        print(m)
+
+
 MENU = {
-    "1": ("Изменить размер матрицы", action_resize),
-    "2": ("Загрузить матрицу из файла", action_load_from_file),
+    "1": ("Ввести/загрузить матрицу", action_load_or_create),
+    "2": ("Изменить размер матрицы", action_resize),
     "3": ("Извлечь подматрицу", action_submatrix),
     "4": ("Транспонировать матрицу", action_transpose),
     "5": ("Проверить тип матрицы", action_check_type),
@@ -146,6 +214,7 @@ MENU = {
     "12": ("Возвести матрицу в степень", action_pow),
     "13": ("Вычислить определитель", action_determinant),
     "14": ("Вычислить норму", action_norm),
+    "15": ("Показать сохранённые матрицы", action_list_saved),
 }
 
 
@@ -158,6 +227,8 @@ def print_menu() -> None:
 def run() -> None:
     while True:
         print("\n--- Матрицы ---")
+        if _session_matrices:
+            print(f"(сохранено матриц в сессии: {len(_session_matrices)})")
         print_menu()
         choice = input("Выберите действие: ")
         if choice == "0":
