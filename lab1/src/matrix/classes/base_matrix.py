@@ -3,11 +3,13 @@ from typing import List, Any
 
 class BaseMatrix(ABC):
     def __init__(self, 
-                 two_dim_array: List[List[float]]
+                 data: List[List[float]]
                 ) -> None:
-        self.matrix = two_dim_array
-        self.rows = len(two_dim_array)
-        self.columns = len(two_dim_array[0])
+        if not all(isinstance(x, (int, float)) for row in data for x in row):
+            raise TypeError("Все элементы матрицы должны быть числами")
+        self.matrix = data
+        self.rows = len(data)
+        self.columns = len(data[0])
 
     def _build(self, data: List[List[float]]) -> "BaseMatrix":
         return type(self)(data)

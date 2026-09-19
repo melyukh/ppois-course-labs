@@ -2,7 +2,8 @@ import pytest
 from src.vector.classes.vector import Vector
 
 
-@pytest.mark.parametrize(
+@pytest.mark.parametrize \
+(
     "vector1, vector2, vector3",
     [
         (Vector(1, 2, 3), Vector(4, 5, 6), Vector(7, 8, 9)),
@@ -40,7 +41,8 @@ def test_adding_aksioms(
     assert result.z == pytest.approx(0.0)
 
 
-@pytest.mark.parametrize(
+@pytest.mark.parametrize \
+(
     "vector1, vector2, scalar1, scalar2",
     [
         (Vector(1, 2, 3), Vector(4, 5, 6), 2, 3),
@@ -85,7 +87,8 @@ def test_multiplying_on_scalar_aksioms(
     assert result.z == pytest.approx(0.0)
 
 
-@pytest.mark.parametrize(
+@pytest.mark.parametrize \
+(
     "vector1, vector2, vector3",
     [
         (Vector(1, 2, 3), Vector(4, 5, 6), Vector(7, 8, 9)),
@@ -110,7 +113,8 @@ def test_dot_product_aksioms(
     assert vector1 * vector1 == pytest.approx(vector1.length ** 2)
 
 
-@pytest.mark.parametrize(
+@pytest.mark.parametrize \
+(
     "vector1, vector2",
     [
         (Vector(1, 0, 0), Vector(0, 1, 0)),
@@ -123,7 +127,8 @@ def test_orthogonality(vector1: Vector, vector2: Vector) -> None:
     assert vector1 * vector2 == pytest.approx(0.0)
 
 
-@pytest.mark.parametrize(
+@pytest.mark.parametrize \
+(
     "vector1, vector2, vector3",
     [
         (Vector(1, 2, 3), Vector(4, 5, 6), Vector(7, 8, 9)),
@@ -149,7 +154,8 @@ def test_cross_product_aksioms(
     assert result1.z == pytest.approx(result2.z)
 
 
-@pytest.mark.parametrize(
+@pytest.mark.parametrize \
+(
     "vector1, vector2",
     [
         (Vector(1, 2, 3), Vector(2, 4, 6)),
@@ -164,7 +170,8 @@ def test_collinearity(vector1: Vector, vector2: Vector) -> None:
     assert result.z == pytest.approx(0.0)
 
 
-@pytest.mark.parametrize(
+@pytest.mark.parametrize \
+(
     "vector1, vector2",
     [
         (Vector(1, 2, 3), Vector(4, 5, 6)),
@@ -182,7 +189,8 @@ def test_zero_vector_length():
     v = Vector(0, 0, 0)
     assert v.length == pytest.approx(0.0)
 
-@pytest.mark.parametrize(
+@pytest.mark.parametrize \
+(
     "vector",
     [
         Vector(1, 2, 3),
@@ -198,7 +206,8 @@ def test_cross_product_with_zero_vector(vector: Vector):
     assert result.z == pytest.approx(0.0)
 
 #правило треугольника
-@pytest.mark.parametrize(
+@pytest.mark.parametrize \
+(
     "vector1, vector2",
     [
         (Vector(1, 2, 3), Vector(4, 5, 6)),

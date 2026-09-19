@@ -18,8 +18,8 @@ class DiagonalMatrix(SquareMatrix):
                 raise ValueError("Несоразмерные матрицы\n")
             if not other.is_diagonal():
                 return super().__mul__(other)
-            result = [[0.0] * other.columns for _ in range(self.rows)]
-            for i in range(self.rows):
+            result = [[0.0 for _ in range(other.rows)] for _ in range(self.columns)]
+            for i in range(self.columns):
                 result[i][i] = self.matrix[i][i] * other.matrix[i][i]
             return Matrix.create(result)
         elif Matrix._is_num(other):
@@ -38,6 +38,6 @@ class DiagonalMatrix(SquareMatrix):
             return Matrix.create(self.matrix)
         result = [[0.0] * self.columns for _ in range(self.rows)]
         for i in range(self.rows):
-            result[i][i] = result[i][i] ** number
+            result[i][i] = self.matrix[i][i] ** number
         return Matrix.create(result)
         

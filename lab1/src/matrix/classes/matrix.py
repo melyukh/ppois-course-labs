@@ -52,6 +52,8 @@ class Matrix(BaseMatrix):
         from src.matrix.classes.symmetric_matrix import SymmetricMatrix
         from src.matrix.classes.square_matrix import SquareMatrix
         from src.matrix.classes.zero_matrix import ZeroMatrix
+        from src.matrix.classes.high_triangular_matrix import HighTriangularMatrix
+        from src.matrix.classes.low_triangular_matrix import LowTriangularMatrix
 
         temp = Matrix(data)
 
@@ -112,7 +114,7 @@ class Matrix(BaseMatrix):
             for i in range(self.rows):
                 for j in range(other.columns):
                     for k in range(self.columns):
-                        result[i][j] += self._data[i][k] * other._data[k][j]
+                        result[i][j] += self.matrix[i][k] * other.matrix[k][j]
             return Matrix.create(result)
         elif Matrix._is_num(other):
             new_data = [[self.matrix[i][j] * other for j in range(self.columns)] for i in range(self.rows)]

@@ -29,7 +29,7 @@ class SquareMatrix(Matrix):
                 factor = temp[j][i] / temp[i][i]
                 temp[j] = [temp[j][k] - factor * temp[i][k] for k in range(length)]
 
-        return (-1) ** swap_count * reduce(lambda a, b: a * b, [temp.matrix[i][i] for i in range(length)], 1)
+        return (-1) ** swap_count * reduce(lambda a, b: a * b, [temp[i][i] for i in range(length)], 1)
 
     def __pow__(self, number: int):
         if number < 0: 
