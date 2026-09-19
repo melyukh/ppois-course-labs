@@ -1,0 +1,47 @@
+name: Build Release Archive
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create zip archive
+        working-directory: lab1
+        run: |
+          mkdir -p ../dist
+          zip -r ../dist/lab1-${{ github.sha }}.zip . \
+            -x "*.git*" \
+            -x "*__pycache__*" \
+            -x "*.pytest_cache*" \
+            -x "*.pyc" \
+            -x "*coverage.xml" \
+            -x "*htmlcov*" \
+            -x "*/tests/*" \
+            -x "pytest.ini" \
+            -x ".coveragerc"
+
+      - name: Upload archive as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lab1-build-${{ github.sha }}
+          path: dist/lab1-${{ github.sha }}.zip
+          retention-days: 30
+
+      - name: Create GitHub Release with archive
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: "Build #${{ github.run_number }}"
+          files: dist/lab1-${{ github.sha }}.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -3,3 +3,5 @@ accesstoken.txt
 .env
 __pycache__
 .pytest_cache/
+.coverage
+djghjcs
