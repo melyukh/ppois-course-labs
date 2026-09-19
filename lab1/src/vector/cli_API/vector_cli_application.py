@@ -1,4 +1,4 @@
-from lab1.src.vector.classes.vector import Vector
+from src.vector.classes.vector import Vector
 
 
 def read_vector(prompt: str) -> Vector:
