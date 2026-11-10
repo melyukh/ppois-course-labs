@@ -1,5 +1,5 @@
 from typing import Protocol, Any
 
 class IntegerMapped(Protocol):
-    def __index__(self, other: Any) -> int: 
+    def __int__(self, other: Any) -> int: 
         ...
