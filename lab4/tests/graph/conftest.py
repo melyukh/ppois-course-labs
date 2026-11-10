@@ -1,5 +1,4 @@
 import random
-
 import pytest
 
 from source.graph.oGraphAdjList import OGraphAdjacencyList

@@ -169,9 +169,9 @@ def test_nested_iteration(g):
     assert len(pairs) == 16
 
 
-def test_iteration_over_vertices_and_edges_simultaneously(g):
+def test_iteration_over_nodes_and_edges_simultaneously(g):
     seen = 0
-    for v in g.vertices():
+    for v in g.nodes():
         for e in g.edges():
             seen += 1
     assert seen == 4 * 4

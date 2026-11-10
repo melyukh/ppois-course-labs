@@ -1,8 +1,8 @@
 """IncidentEdgeIterator: g.incident_edges(v).
 
-Допущения: отдаёт и входящие, и исходящие рёбра вершины как кортежи (e_from, e_to);
-петель и кратных рёбер нет; порядок не фиксируем. Если у тебя только исходящие —
-поправь A_EDGES и модельную функцию expected(). РЕШЕНИЯ помечены в тексте.
+Семантика: ИСХОДЯЩИЕ рёбра вершины v как кортежи (e_from, e_to), где e_from == v.
+Входящие рёбра не выдаются. Порядок не фиксируем.
+РЕШЕНИЯ помечены в тексте.
 """
 import itertools
 
@@ -12,7 +12,7 @@ from source.exceptions.badTypeException import BadTypeError
 from source.exceptions.nodeDuplicationException import NodeDuplicationError
 from source.exceptions.notFoundException import EdgeNotFoundError, NodeNotFoundError
 
-A_EDGES = {("a", "b"), ("a", "c"), ("d", "a")}
+A_EDGES = {("a", "b"), ("a", "c")}
 
 
 @pytest.fixture
@@ -20,18 +20,18 @@ def g(build):
     return build("abcde", [
         ("a", "b", 1),     # исходящее из a
         ("a", "c", 2),     # исходящее из a
-        ("d", "a", 3),     # входящее в a
+        ("d", "a", 3),     # входящее в a: НЕ выдаётся
         ("b", "c", 4),     # a не касается
     ])                     # e изолирована
 
 
 def expected(model, v):
-    return {(a, b) for a in model for b in model[a] if v in (a, b)}
+    return {(v, b) for b in model[v]}
 
 
 # ============================ значения ============================
 
-def test_yields_in_and_out_edges(g):
+def test_yields_outgoing_edges(g):
     items = list(g.incident_edges("a"))
     assert set(items) == A_EDGES
     assert len(items) == len(A_EDGES)
@@ -42,89 +42,94 @@ def test_elements_are_pairs(g):
         assert isinstance(e, tuple) and len(e) == 2
 
 
-def test_direction_preserved(g):
-    items = set(g.incident_edges("a"))
-    assert ("d", "a") in items        # входящее осталось (d, a), а не (a, d)
-    assert ("a", "d") not in items
+def test_every_edge_starts_at_node(g):
+    for v in "abcde":
+        assert all(e[0] == v for e in g.incident_edges(v))
 
 
-def test_edges_not_touching_vertex_excluded(g):
+def test_incoming_edges_excluded(g):
+    assert ("d", "a") not in set(g.incident_edges("a"))
+    assert ("a", "d") not in set(g.incident_edges("a"))
+
+
+def test_edges_not_touching_node_excluded(g):
     assert ("b", "c") not in set(g.incident_edges("a"))
 
 
-def test_only_incoming(g):
+def test_node_with_only_incoming_yields_nothing(g):
+    assert list(g.incident_edges("c")) == []      # c — сток
+
+
+def test_source_node(g):
     assert set(g.incident_edges("d")) == {("d", "a")}
 
 
-def test_only_outgoing(build):
+def test_only_outgoing_graph(build):
     g = build("abc", [("a", "b"), ("a", "c")])
     assert set(g.incident_edges("a")) == {("a", "b"), ("a", "c")}
 
 
-def test_sink_vertex(g):
-    assert set(g.incident_edges("c")) == {("a", "c"), ("b", "c")}
-
-
-def test_isolated_vertex_yields_nothing(g):
+def test_isolated_node_yields_nothing(g):
     assert list(g.incident_edges("e")) == []
 
 
-def test_every_yielded_edge_contains_vertex_and_exists(g):
+def test_every_yielded_edge_exists(g):
     for v in "abcde":
-        for e in g.incident_edges(v):
-            assert v in e
-            assert g.has_edge(e_from=e[0], e_to=e[1]) is True
+        for u, w in g.incident_edges(v):
+            assert g.has_edge(e_from=u, e_to=w) is True
 
 
-def test_count_equals_total_power(g):
+def test_count_equals_outgoing_power(g):
     for v in "abcde":
-        p = g.node_power(v)
-        assert len(list(g.incident_edges(v))) == p["from"] + p["to"]
+        assert len(list(g.incident_edges(v))) == g.node_power(v)["to"]
 
 
-def test_each_edge_appears_in_incident_of_both_endpoints(g):
-    for u, v in g.edges():
-        assert (u, v) in set(g.incident_edges(u))
-        assert (u, v) in set(g.incident_edges(v))
-
-
-def test_union_over_all_vertices_is_all_edges(g):
+def test_union_over_all_nodes_is_all_edges(g):
     union = set()
-    for v in g.vertices():
+    for v in g.nodes():
         union |= set(g.incident_edges(v))
     assert union == set(g.edges())
 
 
-def test_sum_of_incident_counts_is_twice_edges(g):
-    total = sum(len(list(g.incident_edges(v))) for v in g.vertices())
-    assert total == 2 * g.edges_count
+def test_sum_of_incident_counts_equals_edges_count(g):
+    total = sum(len(list(g.incident_edges(v))) for v in g.nodes())
+    assert total == g.edges_count
 
 
-def test_opposite_edges_both_listed(build):
+def test_opposite_edges_listed_separately(build):
     g = build("ab", [("a", "b"), ("b", "a")])
-    assert set(g.incident_edges("a")) == {("a", "b"), ("b", "a")}
-    assert len(list(g.incident_edges("a"))) == 2
+    assert list(g.incident_edges("a")) == [("a", "b")]
+    assert list(g.incident_edges("b")) == [("b", "a")]
 
 
 def test_reflects_deleted_edge(g):
+    g.delete_edge("a", "c")
+    assert set(g.incident_edges("a")) == {("a", "b")}
+
+
+def test_deleting_incoming_edge_does_not_change_result(g):
     g.delete_edge("d", "a")
-    assert set(g.incident_edges("a")) == {("a", "b"), ("a", "c")}
+    assert set(g.incident_edges("a")) == A_EDGES
     assert list(g.incident_edges("d")) == []
 
 
 def test_reflects_deleted_node(g):
     g.delete_node("b")
-    assert set(g.incident_edges("a")) == {("a", "c"), ("d", "a")}
-    assert set(g.incident_edges("c")) == {("a", "c")}
+    assert set(g.incident_edges("a")) == {("a", "c")}
 
 
 def test_reflects_added_edge(g):
+    g.create_edge("a", "e", 1)
+    assert set(g.incident_edges("a")) == A_EDGES | {("a", "e")}
+
+
+def test_added_incoming_edge_does_not_appear(g):
     g.create_edge("e", "a", 1)
-    assert set(g.incident_edges("a")) == A_EDGES | {("e", "a")}
+    assert set(g.incident_edges("a")) == A_EDGES
     assert set(g.incident_edges("e")) == {("e", "a")}
 
 
-def test_recreated_vertex_has_no_old_edges(g):
+def test_recreated_node_has_no_old_edges(g):
     g.delete_node("a")
     g.create_node("a")
     assert list(g.incident_edges("a")) == []
@@ -134,8 +139,8 @@ def test_recreated_vertex_has_no_old_edges(g):
 def test_hub_with_many_edges(build, n):
     g = build(range(2 * n + 1), [(0, i) for i in range(1, n + 1)] + [(i, 0) for i in range(n + 1, 2 * n + 1)])
     items = list(g.incident_edges(0))
-    assert len(items) == 2 * n
-    assert len(set(items)) == 2 * n
+    assert len(items) == n                      # входящие n штук не считаются
+    assert len(set(items)) == n
 
 
 # ============================ протокол итератора ============================
@@ -173,35 +178,35 @@ def test_new_iterator_each_call(g):
     assert list(g.incident_edges("a")) == list(g.incident_edges("a"))
 
 
-def test_independent_iterators_same_vertex(g):
+def test_independent_iterators_same_node(g):
     it1, it2 = g.incident_edges("a"), g.incident_edges("a")
     first = next(it1)
     next(it1)
     assert next(it2) == first
 
 
-def test_independent_iterators_different_vertices(g):
+def test_independent_iterators_different_nodes(g):
     it_a, it_d = g.incident_edges("a"), g.incident_edges("d")
     next(it_a)
     assert next(it_d) == ("d", "a")
-    assert len(list(it_a)) == 2
+    assert len(list(it_a)) == 1
 
 
 def test_nested_iteration(g):
     pairs = [(e1, e2) for e1 in g.incident_edges("a") for e2 in g.incident_edges("a")]
-    assert len(pairs) == 9
+    assert len(pairs) == 4
 
 
-def test_iterating_incident_of_every_vertex_while_iterating_vertices(g):
+def test_iterating_incident_of_every_node_while_iterating_nodes(g):
     total = 0
-    for v in g.vertices():
+    for v in g.nodes():
         total += len(list(g.incident_edges(v)))
-    assert total == 8
+    assert total == 4
 
 
 def test_works_with_itertools(g):
-    assert len(list(itertools.islice(g.incident_edges("a"), 2))) == 2
-    assert set(itertools.chain(g.incident_edges("a"), g.incident_edges("d"))) == A_EDGES
+    assert len(list(itertools.islice(g.incident_edges("a"), 1))) == 1
+    assert set(itertools.chain(g.incident_edges("a"), g.incident_edges("d"))) == A_EDGES | {("d", "a")}
 
 
 def test_works_with_builtins(g):
@@ -209,7 +214,7 @@ def test_works_with_builtins(g):
     assert ("a", "b") in g.incident_edges("a")
     assert ("b", "c") not in g.incident_edges("a")
     assert all(len(e) == 2 for e in g.incident_edges("a"))
-    assert any(e[0] == "d" for e in g.incident_edges("a"))
+    assert any(e[1] == "c" for e in g.incident_edges("a"))
 
 
 def test_partial_consumption_then_rest(g):
@@ -263,18 +268,23 @@ def test_abandoned_iterator_does_not_block_graph(g):
 # ============================ исключения графа и итератор ============================
 
 @pytest.mark.parametrize("v", ["zzz", 42, ("t", 1)])
-def test_missing_vertex_raises(g, v):
+def test_missing_node_raises(g, v):
     with pytest.raises(NodeNotFoundError):
         list(g.incident_edges(v))
 
 
-def test_deleted_vertex_raises(g):
+def test_deleted_node_raises(g):
     g.delete_node("a")
     with pytest.raises(NodeNotFoundError):
         list(g.incident_edges("a"))
 
 
-def test_missing_vertex_does_not_change_graph(g, fingerprint):
+def test_unhashable_node_raises_bad_type(g):
+    with pytest.raises(BadTypeError):
+        list(g.incident_edges([1, 2]))
+
+
+def test_missing_node_does_not_change_graph(g, fingerprint):
     before = fingerprint(g, "abcdez")
     with pytest.raises(NodeNotFoundError):
         list(g.incident_edges("zzz"))
@@ -285,9 +295,9 @@ def test_delete_all_yielded_incident_edges(g):
     for e in list(g.incident_edges("a")):
         g.delete_edge(*e)
     assert list(g.incident_edges("a")) == []
-    assert g.node_power("a") == {"from": 0, "to": 0}
-    assert g.edges_count == 1                 # осталось только b->c
-    assert g.has_node("a")                    # вершина жива
+    assert g.node_power("a") == {"from": 1, "to": 0}     # входящее d->a осталось
+    assert g.edges_count == 2                            # d->a и b->c
+    assert g.has_node("a")
 
 
 @pytest.mark.parametrize("edge", sorted(A_EDGES))
@@ -305,17 +315,16 @@ def test_reverse_of_yielded_edge_is_missing(g):
         g.delete_edge("b", "a")
 
 
-def test_deleting_vertex_after_listing_incident_removes_them(g):
+def test_deleting_node_after_listing_removes_edges(g):
     listed = list(g.incident_edges("a"))
     g.delete_node("a")
     for u, v in listed:
         assert g.has_edge(e_from=u, e_to=v) is False
-    # РЕШЕНИЕ: допустимо любое из двух «не найдено»; зафиксируй своё
     with pytest.raises((EdgeNotFoundError, NodeNotFoundError)):
         g.delete_edge("a", "b")
 
 
-def test_create_edge_to_missing_vertex_does_not_add_incident(g):
+def test_create_edge_to_missing_node_does_not_add_incident(g):
     with pytest.raises(NodeNotFoundError):
         g.create_edge("a", "zzz", 1)
     assert set(g.incident_edges("a")) == A_EDGES
@@ -325,7 +334,6 @@ def test_bad_mass_does_not_add_incident(g):
     with pytest.raises(BadTypeError):
         g.create_edge("a", "e", 1.5)
     assert set(g.incident_edges("a")) == A_EDGES
-    assert list(g.incident_edges("e")) == []
 
 
 def test_duplicate_node_does_not_change_incident(g):
@@ -359,7 +367,7 @@ def test_change_between_creation_and_first_next_raises(g):
         next(it)
 
 
-def test_deleting_iterated_vertex_during_iteration_raises(g):
+def test_deleting_iterated_node_during_iteration_raises(g):
     it = g.incident_edges("a")
     next(it)
     g.delete_node("a")
@@ -370,13 +378,13 @@ def test_deleting_iterated_vertex_during_iteration_raises(g):
 def test_new_iterator_works_after_invalidated_one(g):
     it = g.incident_edges("a")
     next(it)
-    g.create_edge("e", "a", 1)
+    g.create_edge("a", "e", 1)
     with pytest.raises(RuntimeError):
         next(it)
-    assert set(g.incident_edges("a")) == A_EDGES | {("e", "a")}
+    assert set(g.incident_edges("a")) == A_EDGES | {("a", "e")}
 
 
-def test_other_vertex_iterator_also_invalidated(g):
+def test_other_node_iterator_also_invalidated(g):
     # РЕШЕНИЕ: версия общая на весь граф, поэтому меняется и чужой итератор
     it = g.incident_edges("d")
     g.create_edge("e", "b", 1)
