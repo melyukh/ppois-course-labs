@@ -6,42 +6,81 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  detect:
     runs-on: ubuntu-latest
+    outputs:
+      labs: ${{ steps.pick.outputs.labs }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Find lab folders
+        id: pick
+        run: |
+          labs=$(ls -d lab*/ 2>/dev/null | sed 's#/$##' | jq -R . | jq -sc .)
+          echo "Лабы: $labs"
+          echo "labs=$labs" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: detect
+    if: needs.detect.outputs.labs != '[]'
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        lab: ${{ fromJSON(needs.detect.outputs.labs) }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Create zip archive
-        working-directory: lab1
+      - name: Create zip archive (${{ matrix.lab }})
+        working-directory: ${{ matrix.lab }}
         run: |
           mkdir -p ../dist
-          zip -r ../dist/lab1-${{ github.sha }}.zip . \
+          zip -r ../dist/${{ matrix.lab }}-${{ github.sha }}.zip . \
             -x "*.git*" \
             -x "*__pycache__*" \
             -x "*.pytest_cache*" \
             -x "*.pyc" \
             -x "*coverage.xml" \
             -x "*htmlcov*" \
+            -x "tests/*" \
             -x "*/tests/*" \
+            -x "venv/*" \
+            -x ".venv/*" \
             -x "pytest.ini" \
             -x ".coveragerc"
 
-      - name: Upload archive as artifact11
+      - name: Upload archive as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: lab1-build-${{ github.sha }}
-          path: dist/lab1-${{ github.sha }}.zip
+          name: ${{ matrix.lab }}-build-${{ github.sha }}
+          path: dist/${{ matrix.lab }}-${{ github.sha }}.zip
           retention-days: 30
 
-      - name: Create GitHub Release with archive
-        if: github.ref == 'refs/heads/main'
+  release:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # права на создание релиза, не зависят от настройки репозитория
+
+    steps:
+      - name: Download all archives
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "*-build-${{ github.sha }}"
+          merge-multiple: true
+          path: dist
+
+      - name: Create GitHub Release with archives
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
           name: "Build #${{ github.run_number }}"
-          files: dist/lab1-${{ github.sha }}.zip
+          files: dist/*.zip
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
