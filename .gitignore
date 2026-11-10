@@ -4,4 +4,4 @@ accesstoken.txt
 __pycache__
 .pytest_cache/
 .coverage
-djghjcs
+coverage.xml

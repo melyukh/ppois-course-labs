@@ -2,17 +2,52 @@ name: CI
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main, dev, "dev_lab*"]
   pull_request:
     branches: [main, dev]
 
 jobs:
+  # Определяем, какие лабы гонять:
+  #   ветка dev_lab<N>  -> только lab<N>
+  #   любая другая      -> все папки lab*
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      labs: ${{ steps.pick.outputs.labs }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Pick labs by branch name
+        id: pick
+        env:
+          # для pull request берём ветку-источник, для push — текущую ветку
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          if [[ "$BRANCH" =~ ^dev_lab([0-9]+)$ ]]; then
+            lab="lab${BASH_REMATCH[1]}"
+            if [ ! -d "$lab" ]; then
+              echo "::error::Ветка $BRANCH, но папки $lab в репозитории нет"
+              exit 1
+            fi
+            labs="[\"$lab\"]"
+          else
+            labs=$(ls -d lab*/ 2>/dev/null | sed 's#/$##' | jq -R . | jq -sc .)
+          fi
+          echo "Ветка: $BRANCH, лабы: $labs"
+          echo "labs=$labs" >> "$GITHUB_OUTPUT"
+
   test:
+    needs: detect
+    if: needs.detect.outputs.labs != '[]'
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12", "3.13"]
+        lab: ${{ fromJSON(needs.detect.outputs.labs) }}
+        # 3.11 убрана: lab4 использует синтаксис class X[T] (PEP 695), он есть с 3.12
+        python-version: ["3.12", "3.13"]
 
     steps:
       - name: Checkout repository
@@ -24,27 +59,45 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        working-directory: lab1
+        working-directory: ${{ matrix.lab }}
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install pytest pytest-cov
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      - name: Run tests with coverage
-        working-directory: lab1
+      - name: Run tests with coverage (${{ matrix.lab }})
+        working-directory: ${{ matrix.lab }}
+        env:
+          PYTHONPATH: .
         run: |
-          pytest -v \
-            src/vector/tests/ \
-            src/matrix/tests/ \
-            --cov=src --cov-report=term-missing --cov-report=xml
+          # тесты лежат в <lab>/tests; если папки нет (как в lab1) — pytest ищет сам
+          if [ -d tests ]; then target=tests; else target=.; fi
+          set +e
+          pytest -v "$target" --cov=. --cov-report=term-missing --cov-report=xml
+          code=$?
+          if [ "$code" -eq 5 ]; then
+            echo "::notice::В ${{ matrix.lab }} тестов не найдено"
+            exit 0
+          fi
+          exit "$code"
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-report-${{ matrix.python-version }}
-          path: lab1/coverage.xml
+          name: coverage-${{ matrix.lab }}-${{ matrix.python-version }}
+          path: ${{ matrix.lab }}/coverage.xml
+          if-no-files-found: ignore
 
   lint:
+    needs: detect
+    if: needs.detect.outputs.labs != '[]'
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        lab: ${{ fromJSON(needs.detect.outputs.labs) }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -57,7 +110,7 @@ jobs:
       - name: Install linters
         run: pip install flake8
 
-      - name: Run flake8
-        working-directory: lab1
-        run: flake8 src --max-line-length=120 --extend-ignore=E203,W503
+      - name: Run flake8 (${{ matrix.lab }})
+        working-directory: ${{ matrix.lab }}
+        run: flake8 . --exclude=tests,.git,__pycache__,venv,.venv --max-line-length=120 --extend-ignore=E203,W503
         continue-on-error: true  # не блокирует пайплайн, только предупреждает
