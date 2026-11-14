@@ -5,3 +5,8 @@ __pycache__
 .pytest_cache/
 .coverage
 coverage.xml
+djghjcs
+.vscode/
+*logs*
+temp/
+datafiles/
