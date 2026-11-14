@@ -99,7 +99,7 @@ BaseMatrix (ABC)              — структурные операции (1.7.1
                     ├── SymmetricMatrix
                     ├── HighTriangularMatrix
                     └── LowTriangularMatrix
-    └── ZeroMatrix
+        └── ZeroMatrix
 ```
 
 ### Возможности

@@ -15,11 +15,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Create zip archive
-        working-directory: lab1
+      - name: Create zip archive (${{ matrix.lab }})
+        working-directory: ${{ matrix.lab }}
         run: |
           mkdir -p ../dist
-          zip -r ../dist/lab1-${{ github.sha }}.zip . \
+          zip -r ../dist/${{ matrix.lab }}-${{ github.sha }}.zip . \
             -x "*.git*" \
             -x "*__pycache__*" \
             -x "*.pytest_cache*" \
@@ -28,18 +28,34 @@ jobs:
             -x "*htmlcov*" \
             -x "tests/*" \
             -x "*/tests/*" \
+            -x "venv/*" \
+            -x ".venv/*" \
             -x "pytest.ini" \
             -x ".coveragerc"
 
       - name: Upload archive as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: lab1-build-${{ github.sha }}
-          path: dist/lab1-${{ github.sha }}.zip
+          name: ${{ matrix.lab }}-build-${{ github.sha }}
+          path: dist/${{ matrix.lab }}-${{ github.sha }}.zip
           retention-days: 30
 
-      - name: Create GitHub Release with archive
-        if: github.ref == 'refs/heads/main'
+  release:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # права на создание релиза, не зависят от настройки репозитория
+
+    steps:
+      - name: Download all archives
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "*-build-${{ github.sha }}"
+          merge-multiple: true
+          path: dist
+
+      - name: Create GitHub Release with archives
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-lab1-${{ github.run_number }}
