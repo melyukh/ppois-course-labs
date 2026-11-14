@@ -5,10 +5,12 @@ on:
     branches: [main]
   workflow_dispatch:
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
+permissions:
+  contents: write   # нужно для создания релиза
 
+jobs:
+  build-lab1:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -24,6 +26,7 @@ jobs:
             -x "*.pyc" \
             -x "*coverage.xml" \
             -x "*htmlcov*" \
+            -x "tests/*" \
             -x "*/tests/*" \
             -x "pytest.ini" \
             -x ".coveragerc"
@@ -39,9 +42,50 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: build-${{ github.run_number }}
-          name: "Build #${{ github.run_number }}"
+          tag_name: build-lab1-${{ github.run_number }}
+          name: "Lab 1 build #${{ github.run_number }}"
           files: dist/lab1-${{ github.sha }}.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-lab4:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create zip archive
+        working-directory: lab4
+        run: |
+          mkdir -p ../dist
+          zip -r ../dist/lab4-${{ github.sha }}.zip . \
+            -x "*.git*" \
+            -x "*__pycache__*" \
+            -x "*.pytest_cache*" \
+            -x "*.pyc" \
+            -x "*coverage.xml" \
+            -x "*htmlcov*" \
+            -x "tests/*" \
+            -x "*/tests/*" \
+            -x "conftest.py" \
+            -x "pytest.ini" \
+            -x ".coveragerc"
+
+      - name: Upload archive as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lab4-build-${{ github.sha }}
+          path: dist/lab4-${{ github.sha }}.zip
+          retention-days: 30
+
+      - name: Create GitHub Release with archive
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-lab4-${{ github.run_number }}
+          name: "Lab 4 build #${{ github.run_number }}"
+          files: dist/lab4-${{ github.sha }}.zip
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
